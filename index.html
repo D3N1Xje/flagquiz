@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>FLAGQUIZ — denní výzva</title>
+<meta name="description" content="Stejných 10 vlajek pro celý svět. Jeden pokus denně.">
+<meta property="og:title" content="FLAGQUIZ — denní výzva">
+<meta property="og:description" content="Stejných 10 vlajek pro celý svět. Jeden pokus denně. Dáš jich víc?">
+<meta property="og:type" content="website">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚩</text></svg>">
+<style>
+  :root{
+    --bg:#0D0D0F; --card:#141416; --border:#3A3A3E; --accent:#22C55E;
+    --text:#F5F5F5; --text2:#8E8E93; --on-accent:#04340F; --danger:#E24B4A;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0; padding:0; background:var(--bg); color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;}
+  .wrap{max-width:430px; margin:0 auto; padding:20px 20px calc(24px + env(safe-area-inset-bottom));
+    min-height:100dvh; display:flex; flex-direction:column;}
+  .screen{display:none; flex:1; flex-direction:column; animation:fade .18s ease-out;}
+  .screen.on{display:flex;}
+  @keyframes fade{from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:none;}}
+
+  .logo{font-size:44px; font-weight:800; letter-spacing:1px; text-align:center; margin:36px 0 6px;}
+  .sub{color:var(--text2); text-align:center; font-size:15px; margin:0 0 4px;}
+  .date{color:var(--text2); text-align:center; font-size:14px; margin:0;}
+  .spacer{flex:1;}
+  .note{color:var(--text2); font-size:13px; text-align:center; line-height:1.5; margin:14px 0 0;}
+
+  .btn{display:block; width:100%; border:none; border-radius:18px; padding:17px 16px;
+    font-size:19px; font-weight:700; cursor:pointer; text-align:center;
+    transition:transform .08s ease; user-select:none;}
+  .btn:active{transform:scale(.97);}
+  .btn-accent{background:var(--accent); color:var(--on-accent);}
+  .btn-outline{background:var(--card); color:var(--text); border:2px solid var(--border);}
+  .btn+.btn{margin-top:12px;}
+  .btn.correct{background:var(--accent) !important; color:var(--on-accent) !important; border-color:var(--accent) !important;}
+  .btn.shake{animation:shake .3s;}
+  @keyframes shake{0%,100%{transform:translateX(0);} 25%{transform:translateX(-7px);} 75%{transform:translateX(7px);}}
+
+  .hud{display:flex; justify-content:space-between; align-items:baseline; margin:4px 0 14px;}
+  .hud b{font-size:30px; font-weight:800;}
+  .hud span{color:var(--text2); font-size:15px;}
+  .flagcard{background:var(--card); border:2px solid var(--border); border-radius:20px;
+    padding:16px; margin-bottom:10px;}
+  .flagcard img{display:block; width:100%; height:auto; border-radius:8px;}
+  .question{color:var(--text2); text-align:center; font-size:15px; margin:10px 0 16px;}
+
+  .bigscore{font-size:64px; font-weight:800; text-align:center; margin:34px 0 2px;}
+  .timeline{color:var(--text2); text-align:center; font-size:17px; margin:0 0 18px;}
+  .squares{text-align:center; font-size:24px; letter-spacing:3px; margin:0 0 26px; word-break:break-all;}
+  .streak{color:var(--text2); text-align:center; font-size:15px; margin:14px 0 0;}
+  .badge{display:inline-block; background:var(--card); border:1px solid var(--border);
+    border-radius:999px; color:var(--text2); font-size:14px; padding:6px 14px; margin-top:14px;}
+  .center{text-align:center;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <section id="s-intro" class="screen">
+    <h1 class="logo">FLAGQUIZ</h1>
+    <p class="sub" data-i18n="sub"></p>
+    <p class="date" id="intro-date"></p>
+    <p class="center" id="intro-streak" style="display:none"><span class="badge" id="intro-streak-text"></span></p>
+    <div class="spacer"></div>
+    <button class="btn btn-accent" id="btn-play" data-i18n="play"></button>
+    <p class="note" data-i18n="intro-note"></p>
+  </section>
+
+  <section id="s-game" class="screen">
+    <div class="hud"><b id="g-timer">0</b><span id="g-progress">1/10</span></div>
+    <div class="flagcard"><img id="g-flag" alt="?" src=""></div>
+    <p class="question" data-i18n="question"></p>
+    <div id="g-answers"></div>
+  </section>
+
+  <section id="s-result" class="screen">
+    <p class="sub" id="r-date"></p>
+    <div class="bigscore" id="r-score"></div>
+    <p class="timeline" id="r-time"></p>
+    <p class="squares" id="r-squares"></p>
+    <div class="spacer"></div>
+    <button class="btn btn-accent" id="btn-share" data-i18n="share"></button>
+    <p class="streak" id="r-streak"></p>
+    <p class="note" data-i18n="tomorrow"></p>
+  </section>
+
+</div>
+<!-- Analytika (GoatCounter): az bude ucet, odkomentuj a dopln svuj kod misto MUJKOD:
+<script data-goatcounter="https://MUJKOD.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+-->
+<script src="data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
