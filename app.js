@@ -117,8 +117,17 @@ const store = {
   },
 };
 
-// ---------- analytika (no-op, dokud není GoatCounter) ----------
+// ---------- analytika ----------
+// hits.sh: pocitadlo bez registrace, jeden citac na cestu. DEV rezim a
+// localhost se nepocitaji, at si testovani nespini cisla. Ad-blockery
+// mohou pingy blokovat -> cisla ber jako spodni odhad.
+const DEV = new URLSearchParams(location.search).has("dev") || location.hostname === "localhost";
+
 function track(path) {
+  if (DEV) return;
+  const key = path.replace("/", "");
+  fetch("https://hits.sh/d3n1xje.github.io/flagquiz/" + key + ".svg",
+        { mode: "no-cors", cache: "no-store" }).catch(() => {});
   if (window.goatcounter && window.goatcounter.count) {
     window.goatcounter.count({ path: path, title: path, event: true });
   }
@@ -242,6 +251,7 @@ function init() {
     localStorage.removeItem("fq_streak");
     localStorage.removeItem("fq_result");
   }
+  track("/view");
 
   document.querySelectorAll("[data-i18n]").forEach(el => {
     const k = el.getAttribute("data-i18n");
