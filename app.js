@@ -20,6 +20,8 @@ const T = CS ? {
   shareTitle: "FlagQuiz — denní výzva",
   challengeName: "denní výzva",
   shareLine: (c, n, s, st) => c + "/" + n + " za " + s + " s, série " + st,
+  collectionGrowth: (added, total) => "+" + added + " nové · sbírka " + total + "/" + TOTAL_COUNTRIES,
+  collectionState: total => "sbírka " + total + "/" + TOTAL_COUNTRIES,
 } : {
   sub: "daily challenge · 10 flags",
   play: "PLAY",
@@ -34,7 +36,11 @@ const T = CS ? {
   shareTitle: "FlagQuiz — daily challenge",
   challengeName: "daily challenge",
   shareLine: (c, n, s, st) => c + "/" + n + " in " + s + " s, streak " + st,
+  collectionGrowth: (added, total) => "+" + added + " new · collection " + total + "/" + TOTAL_COUNTRIES,
+  collectionState: total => "collection " + total + "/" + TOTAL_COUNTRIES,
 };
+
+const TOTAL_COUNTRIES = COUNTRIES.length;   // 197 - zrcadlo poctu radku v countries.csv
 
 // ---------- deterministická náhoda (zrcadlo Unity DailyChallenge.Rng) ----------
 function makeRng(seed) {
@@ -86,7 +92,10 @@ function buildRound(pool, seed) {
   return picked.map(q => {
     const candidates = pool.filter(o => o.i !== q.i && !inRound.has(o.i));
     const distractors = [];
-    if (q.g) takeInto(distractors, shuffle(candidates.filter(o => o.g === q.g), rng));
+    // Dvojnik musi byt ze stejne vrstvy (rozhodnuti autora 17. 8.) - jinak
+    // hrac vylouci exotickeho dvojnika podle nazvu, ne podle vlajky.
+    // POZOR: stejny filtr je v DailyChallenge.BuildRound i v BuildOptions.
+    if (q.g) takeInto(distractors, shuffle(candidates.filter(o => o.g === q.g && o.d === q.d), rng));
     takeInto(distractors, shuffle(candidates.filter(o => o.r === q.r && o.d === q.d), rng));
     takeInto(distractors, shuffle(candidates.filter(o => o.d === q.d), rng));
     takeInto(distractors, shuffle(candidates.slice(), rng));
@@ -115,6 +124,14 @@ const store = {
     if (this.date !== dayString(new Date()) && this.date !== dayString(y)) return 0;
     return this.streak;
   },
+  get collection() { return new Set((localStorage.getItem("fq_collection") || "").split(",").filter(Boolean)); },
+  addCaught(iso) {                       // chycena = spravne >=1 v denni hre na webu (S1)
+    const set = this.collection;
+    if (set.has(iso)) return false;
+    set.add(iso);
+    localStorage.setItem("fq_collection", [...set].join(","));
+    return true;
+  },
 };
 
 // ---------- analytika ----------
@@ -136,7 +153,7 @@ function track(path) {
 // ---------- UI ----------
 const $ = id => document.getElementById(id);
 const name = q => (CS ? q.c : q.e);
-let round = [], index = 0, correctCount = 0, outcome = [], locked = false;
+let round = [], index = 0, correctCount = 0, outcome = [], locked = false, collectionDelta = 0;
 let startedAt = 0, timerHandle = 0;
 
 function show(id) {
@@ -152,7 +169,7 @@ function fmtDate(d) {
 function startRound() {
   round = buildRound(COUNTRIES, todaySeed(new Date()));
   for (const item of round) { const img = new Image(); img.src = "flags/" + item.q.i + ".png"; }
-  index = 0; correctCount = 0; outcome = []; locked = false;
+  index = 0; correctCount = 0; outcome = []; locked = false; collectionDelta = 0;
   startedAt = Date.now();
   timerHandle = setInterval(() => { $("g-timer").textContent = Math.floor((Date.now() - startedAt) / 1000); }, 250);
   track("/start");
@@ -181,6 +198,7 @@ function answer(btn, opt, item) {
   outcome.push(good);
   if (good) {
     correctCount++;
+    if (store.addCaught(item.q.i)) collectionDelta++;
     next();
     return;
   }
@@ -213,6 +231,10 @@ function renderResult(correct, seconds, squares) {
   $("r-score").textContent = T.scoreOf(correct, ROUND_SIZE);
   $("r-time").textContent = T.inTime(seconds);
   $("r-squares").textContent = [...squares].map(c => (c === "1" ? "✅" : "❌")).join("");
+  const total = store.collection.size;
+  $("r-collection").textContent = collectionDelta > 0
+    ? T.collectionGrowth(collectionDelta, total)
+    : T.collectionState(total);
   $("r-streak").textContent = T.streak(store.currentStreak());
   show("s-result");
 }
@@ -250,6 +272,7 @@ function init() {
     localStorage.removeItem("fq_date");
     localStorage.removeItem("fq_streak");
     localStorage.removeItem("fq_result");
+    localStorage.removeItem("fq_collection");
   }
   track("/view");
 
